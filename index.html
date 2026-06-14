@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Has Three Jobs</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Faustina:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500;1,600&family=Golos+Text:wght@400;500;600;700&family=Roboto+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0B0D11;
+    --ink:#E9ECF1;
+    --dim:rgba(233,236,241,.52);
+    --faint:rgba(233,236,241,.30);
+    --hair:rgba(233,236,241,.14);
+    --accent:#E3B341;
+    --lv1:#5B9DF9;  /* time  */
+    --lv2:#3FBE8E;  /* money */
+    --lv3:#A98BF6;  /* unlock*/
+    --serif:'Faustina',Georgia,serif;
+    --sans:'Golos Text',system-ui,sans-serif;
+    --mono:'Roboto Mono',ui-monospace,monospace;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{height:100%;background:var(--bg);overflow:hidden}
+  body{font-family:var(--sans);color:var(--ink);-webkit-font-smoothing:antialiased}
+
+  #viewport{position:fixed;inset:0;overflow:hidden;display:flex;align-items:center;justify-content:center}
+  #stage{position:absolute;top:50%;left:50%;width:1280px;height:720px;transform:translate(-50%,-50%);transform-origin:center center;background:var(--bg)}
+  #stage::before{content:"";position:absolute;inset:0;pointer-events:none;z-index:0;
+    background:
+      repeating-linear-gradient(90deg, transparent 0 159px, rgba(233,236,241,.022) 159px 160px),
+      radial-gradient(120% 80% at 50% -10%, rgba(255,255,255,.035), transparent 60%),
+      radial-gradient(140% 120% at 50% 120%, rgba(0,0,0,.55), transparent 55%);
+  }
+
+  /* ---------- chrome: nav + counter ---------- */
+  #nav{position:absolute;left:48px;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:25px;z-index:6}
+  #nav::before{content:"";position:absolute;left:9px;top:7px;bottom:7px;width:1px;background:var(--hair)}
+  .nav-item{display:flex;align-items:center;gap:15px;background:none;border:0;cursor:pointer;padding:0;text-align:left}
+  .cap{width:19px;height:5px;border-radius:3px;background:transparent;border:1px solid var(--faint);flex:0 0 auto;transition:.35s ease;position:relative}
+  .nav-item.done .cap{background:var(--faint);border-color:transparent;width:13px}
+  .nav-item.active .cap{background:var(--accent);border-color:transparent;width:26px;box-shadow:0 0 13px 1px var(--accent)}
+  .lab{font-family:var(--mono);font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--faint);display:flex;align-items:center;gap:9px;transition:.35s ease;white-space:nowrap}
+  .lab i{font-style:normal;font-size:10px;opacity:.55;letter-spacing:.1em}
+  .nav-item.active .lab{color:var(--ink)}
+  .nav-item.done .lab{color:var(--dim)}
+
+  #counter{position:absolute;top:34px;right:46px;z-index:6;font-family:var(--mono);font-size:13px;letter-spacing:.16em;color:var(--faint)}
+  #counter b{color:var(--ink);font-weight:500}
+
+  /* ---------- slides ---------- */
+  .slide{position:absolute;inset:0;padding:72px 88px 60px 186px;opacity:0;visibility:hidden;z-index:1;
+    transition:opacity .5s ease;display:flex;flex-direction:column}
+  .slide.active{opacity:1;visibility:visible;z-index:2}
+
+  .kick{font-family:var(--mono);font-size:13px;letter-spacing:.26em;text-transform:uppercase;color:var(--accent);display:flex;align-items:center;gap:13px;margin-bottom:18px}
+  .kick .gl{width:22px;height:6px;border-radius:3px;background:var(--accent);box-shadow:0 0 11px 1px var(--accent);flex:0 0 auto}
+  .title{font-family:var(--serif);font-weight:600;letter-spacing:-.01em;line-height:1.02;font-size:62px}
+  .title em{font-style:italic;color:var(--accent);font-weight:600}
+  .sub{font-family:var(--serif);font-style:italic;font-weight:400;color:var(--dim);font-size:23px;margin-top:16px;max-width:760px;line-height:1.35}
+
+  /* reveal helpers */
+  .fade{opacity:0;transform:translateY(12px);transition:opacity .6s ease,transform .6s ease}
+  .fade.on{opacity:1;transform:none}
+  .lit{opacity:.16;transition:opacity .55s ease}
+  .lit.on{opacity:1}
+
+  /* ---------- meters / faders ---------- */
+  .deck-row{display:flex;align-items:flex-end;gap:var(--g,60px)}
+  .meter{display:flex;flex-direction:column;align-items:center;gap:0;--c:var(--accent)}
+  .readout{font-family:var(--mono);font-size:26px;font-weight:500;color:var(--c);margin-bottom:12px;line-height:1;min-height:26px}
+  .track{position:relative;width:56px;height:298px;border:1px solid var(--hair);border-radius:9px;
+    background:repeating-linear-gradient(0deg, transparent 0 28px, rgba(233,236,241,.045) 28px 29px);overflow:visible}
+  .fill{position:absolute;left:3px;right:3px;bottom:3px;height:var(--h,38%);border-radius:6px;background:var(--c);opacity:.22;transition:height .75s cubic-bezier(.45,.05,.2,1)}
+  .handle{position:absolute;left:-8px;right:-8px;height:7px;bottom:calc(var(--h,38%) - 3.5px);background:var(--c);border-radius:4px;box-shadow:0 0 16px 1px var(--c);transition:bottom .75s cubic-bezier(.45,.05,.2,1)}
+  .mlabel{margin-top:20px;text-align:center}
+  .mlabel .ix{font-family:var(--mono);font-size:12px;letter-spacing:.2em;color:var(--c);opacity:.85}
+  .mlabel .nm{font-family:var(--serif);font-size:22px;font-weight:600;margin-top:5px;color:var(--ink)}
+  .mlabel .ds{font-family:var(--mono);font-size:12px;letter-spacing:.04em;color:var(--dim);margin-top:7px;text-transform:uppercase}
+
+  /* ---------- flow diagram ---------- */
+  .flow{display:flex;align-items:center;gap:24px}
+  .node{display:flex;flex-direction:column;align-items:center;gap:11px}
+  .doc{width:84px;height:104px;border:1px solid var(--hair);border-radius:8px;background:rgba(233,236,241,.02);display:flex;flex-direction:column;justify-content:center;gap:9px;padding:0 16px}
+  .doc span{height:3px;border-radius:2px;background:var(--faint)}
+  .doc span:nth-child(2){width:78%}.doc span:nth-child(3){width:90%}.doc span:nth-child(4){width:64%}
+  .nlabel{font-family:var(--mono);font-size:11.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--dim);text-align:center;line-height:1.5}
+  .ai{width:92px;height:92px;border-radius:18px;border:1.5px solid var(--accent);display:flex;align-items:center;justify-content:center;
+    background:rgba(233,236,241,.02);box-shadow:0 0 26px -6px var(--accent);position:relative}
+  .ai svg{width:42px;height:42px;color:var(--accent)}
+  .arrow{width:74px;height:22px;color:var(--accent);flex:0 0 auto}
+
+  .card{border:1px solid var(--hair);border-radius:13px;background:rgba(233,236,241,.025);overflow:hidden;min-width:368px}
+  .card-hd{font-family:var(--mono);font-size:11.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--accent);
+    padding:13px 22px;border-bottom:1px solid var(--hair);display:flex;align-items:center;justify-content:space-between}
+  .card-hd .pin{width:7px;height:7px;border-radius:50%;background:var(--accent);box-shadow:0 0 9px var(--accent)}
+  .crow{padding:15px 22px;border-bottom:1px solid rgba(233,236,241,.07);display:flex;gap:15px;align-items:baseline}
+  .crow:last-child{border-bottom:0}
+  .crow .rn{font-family:var(--mono);font-size:13px;color:var(--accent);font-weight:500;flex:0 0 auto}
+  .crow .rt{font-family:var(--serif);font-size:19px;font-weight:600;color:var(--ink)}
+  .crow .rd{font-family:var(--mono);font-size:11.5px;letter-spacing:.04em;color:var(--dim);text-transform:uppercase;margin-top:3px}
+
+  .tag{display:inline-flex;align-items:center;gap:9px;font-family:var(--mono);font-size:12px;letter-spacing:.13em;
+    text-transform:uppercase;color:var(--accent);border:1px dashed var(--accent);border-radius:30px;padding:7px 15px}
+  .tag .d{width:6px;height:6px;border-radius:50%;background:var(--accent)}
+
+  /* pile of documents */
+  .pile{display:grid;grid-template-columns:repeat(8,1fr);gap:8px;width:226px}
+  .pile i{display:block;height:21px;border-radius:3px;border:1px solid rgba(169,139,246,.4);background:rgba(169,139,246,.08)}
+
+  /* ranked list */
+  .rank{display:flex;flex-direction:column;gap:0;min-width:392px;border:1px solid var(--hair);border-radius:13px;background:rgba(233,236,241,.025);overflow:hidden}
+  .rrow{display:flex;align-items:center;gap:14px;padding:13px 20px;border-bottom:1px solid rgba(233,236,241,.07)}
+  .rrow:last-child{border-bottom:0}
+  .rrow .rk{font-family:var(--mono);font-size:13px;color:var(--accent);width:24px;flex:0 0 auto;font-weight:500}
+  .rrow .bar{height:9px;border-radius:5px;background:var(--accent);opacity:.85}
+  .rrow .fq{font-family:var(--mono);font-size:12px;color:var(--dim);margin-left:auto;flex:0 0 auto}
+
+  /* ---------- prompt panel ---------- */
+  .prompt{border:1px solid var(--hair);border-radius:15px;background:rgba(233,236,241,.022);position:relative;overflow:hidden}
+  .prompt::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--accent);opacity:.85}
+  .ptab{font-family:var(--mono);font-size:11px;letter-spacing:.24em;text-transform:uppercase;color:var(--accent);
+    padding:13px 26px 0;display:flex;align-items:center;gap:11px}
+  .ptab .gl{width:18px;height:5px;border-radius:3px;background:var(--accent);box-shadow:0 0 9px var(--accent)}
+  .pbody{font-family:var(--mono);white-space:pre-wrap;color:var(--ink);padding:14px 30px 26px;font-weight:400}
+  .var{color:var(--accent);border:1px solid var(--accent);background:rgba(233,236,241,.05);padding:1px 8px;border-radius:7px;font-weight:500;white-space:nowrap}
+  .hl{color:#fff;background:rgba(233,236,241,.08);border-bottom:2px solid var(--accent);padding:1px 4px 2px;border-radius:3px;box-decoration-break:clone;-webkit-box-decoration-break:clone}
+
+  .center{justify-content:center}
+  .grow{flex:1;display:flex;flex-direction:column;justify-content:center}
+  .spread{display:flex;gap:64px;align-items:center}
+</style>
+</head>
+<body>
+<div id="viewport">
+  <div id="stage">
+
+    <nav id="nav"></nav>
+    <div id="counter"><b id="cur">01</b> / <span id="tot">10</span></div>
+
+    <!-- 0 :: START — the start -->
+    <section class="slide center" data-ch="0">
+      <div class="kick"><span class="gl"></span>How everyone starts</div>
+      <h1 class="title">Point AI at the<br>boring stuff first.</h1>
+      <div class="spread" style="margin-top:48px">
+        <div style="display:flex;flex-direction:column;gap:13px">
+          <div class="tag" style="border-style:solid"><span class="d"></span>The right place to start</div>
+          <div style="display:flex;flex-direction:column;gap:11px;margin-top:6px">
+            <div class="nlabel" style="text-align:left;font-size:13px;color:var(--dim)">— Draft the first email</div>
+            <div class="nlabel" style="text-align:left;font-size:13px;color:var(--dim)">— Clean up the notes</div>
+            <div class="nlabel" style="text-align:left;font-size:13px;color:var(--dim)">— Sort the inbox</div>
+            <div class="nlabel" style="text-align:left;font-size:13px;color:var(--dim)">— Build the weekly report</div>
+          </div>
+        </div>
+        <svg class="arrow" viewBox="0 0 74 22" fill="none"><path d="M4 11 H60" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/><path d="M52 4 L64 11 L52 18" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <div class="meter" style="--c:var(--accent)">
+          <div class="readout" style="opacity:0">·</div>
+          <div class="track"><div class="fill" style="--h:30%"></div><div class="handle" style="--h:30%"></div></div>
+          <div class="mlabel"><div class="nm" style="font-size:19px">Admin</div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2 :: THE JOBS — three levels hero -->
+    <section class="slide center" data-ch="1">
+      <div class="kick"><span class="gl"></span>AI has three jobs</div>
+      <h1 class="title">Save time. Make money.<br>Do the impossible.</h1>
+      <div class="deck-row" style="--g:88px;margin-top:44px;justify-content:center">
+        <div class="meter lv1" style="--c:var(--lv1)">
+          <div class="track" style="height:220px"><div class="fill" style="--h:42%"></div><div class="handle" style="--h:42%"></div></div>
+          <div class="mlabel"><div class="ix">LEVEL 01</div></div>
+        </div>
+        <div class="meter lv2" style="--c:var(--lv2)">
+          <div class="track" style="height:220px"><div class="fill" style="--h:68%"></div><div class="handle" style="--h:68%"></div></div>
+          <div class="mlabel"><div class="ix">LEVEL 02</div></div>
+        </div>
+        <div class="meter lv3" style="--c:var(--lv3)">
+          <div class="track" style="height:220px"><div class="fill" style="--h:100%"></div><div class="handle" style="--h:100%"></div></div>
+          <div class="mlabel"><div class="ix">LEVEL 03</div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3 :: THE MIX -->
+    <section class="slide center" data-ch="2" data-steps="1">
+      <div class="kick"><span class="gl"></span>It's not one level</div>
+      <h1 class="title">Your <em>mix.</em></h1>
+      <div class="deck-row" id="mixrow" style="--g:96px;margin-top:48px;justify-content:center">
+        <div class="meter" style="--c:var(--lv1)">
+          <div class="readout"><span class="n0">100</span><span class="n1">55</span></div>
+          <div class="track" style="height:236px"><div class="fill mf1"></div><div class="handle mf1"></div></div>
+          <div class="mlabel"><div class="ix">L1 · TIME</div></div>
+        </div>
+        <div class="meter" style="--c:var(--lv2)">
+          <div class="readout"><span class="n0">0</span><span class="n1">30</span></div>
+          <div class="track" style="height:236px"><div class="fill mf2"></div><div class="handle mf2"></div></div>
+          <div class="mlabel"><div class="ix">L2 · MONEY</div></div>
+        </div>
+        <div class="meter" style="--c:var(--lv3)">
+          <div class="readout"><span class="n0">0</span><span class="n1">15</span></div>
+          <div class="track" style="height:236px"><div class="fill mf3"></div><div class="handle mf3"></div></div>
+          <div class="mlabel"><div class="ix">L3 · UNLOCK</div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4 :: LEVEL 1 / TIME — example -->
+    <section class="slide center" data-ch="3">
+      <div class="kick"><span class="gl"></span>Level 1 · Time-saver</div>
+      <h1 class="title">Call <span style="color:var(--accent)">&rarr;</span> Notes</h1>
+      <div class="flow" style="margin-top:50px">
+        <div class="node"><div class="doc"><span></span><span></span><span></span><span></span></div><div class="nlabel">Transcript</div></div>
+        <svg class="arrow" viewBox="0 0 74 22" fill="none"><path d="M4 11 H60" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/><path d="M52 4 L64 11 L52 18" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <div class="node"><div class="ai"><svg viewBox="0 0 24 24" fill="none"><path d="M12 3 L13.6 9.2 L20 11 L13.6 12.8 L12 19 L10.4 12.8 L4 11 L10.4 9.2 Z" fill="currentColor"/></svg></div><div class="nlabel">AI</div></div>
+        <svg class="arrow" viewBox="0 0 74 22" fill="none"><path d="M4 11 H60" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/><path d="M52 4 L64 11 L52 18" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <div class="card">
+          <div class="card-hd">Clean notes <span class="pin"></span></div>
+          <div class="crow"><span class="rn">1</span><div><div class="rt">Summary</div><div class="rd">3–5 bullets · what was decided</div></div></div>
+          <div class="crow"><span class="rn">2</span><div><div class="rt">Action items</div><div class="rd">owner · task · due date</div></div></div>
+          <div class="crow"><span class="rn">3</span><div><div class="rt">Open questions</div><div class="rd">raised · never answered</div></div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5 :: LEVEL 1 / TIME — prompt -->
+    <section class="slide" data-ch="3">
+      <div class="kick"><span class="gl"></span>Level 1 · The prompt</div>
+      <div class="grow">
+      <div class="prompt" style="margin-top:6px">
+        <div class="ptab"><span class="gl"></span>Prompt</div>
+        <div class="pbody" style="font-size:18px;line-height:1.66">Turn the meeting transcript below into clean notes.
+
+Give me three parts:
+1. A 3-5 bullet summary of what was decided.
+2. Action items as a list: who owns it, what it is, and the due date.
+3. Open questions that were raised but never answered.
+
+Rules:
+- <span class="hl">Use only what's in the transcript.</span>
+- If an owner or due date wasn't stated, write <span class="hl">"not stated."</span>
+- Keep it brief. I should be able to read it in under a minute.
+
+Transcript:
+<span class="var">[PASTE / ATTACH]</span></div>
+      </div>
+      </div>
+    </section>
+
+    <!-- 6 :: LEVEL 2 / MONEY — example -->
+    <section class="slide center" data-ch="4">
+      <div class="kick"><span class="gl"></span>Level 2 · Revenue-mover</div>
+      <h1 class="title">Sources <span style="color:var(--accent)">&rarr;</span> Brief</h1>
+      <div class="flow" style="margin-top:50px">
+        <div class="node">
+          <div style="display:flex;flex-direction:column;gap:7px">
+            <div class="nlabel" style="border:1px solid var(--hair);border-radius:7px;padding:8px 12px">Your notes</div>
+            <div class="nlabel" style="border:1px solid var(--hair);border-radius:7px;padding:8px 12px">Past emails</div>
+            <div class="nlabel" style="border:1px solid var(--hair);border-radius:7px;padding:8px 12px">CRM record</div>
+          </div>
+        </div>
+        <svg class="arrow" viewBox="0 0 74 22" fill="none"><path d="M4 11 H60" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/><path d="M52 4 L64 11 L52 18" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <div class="node"><div class="ai"><svg viewBox="0 0 24 24" fill="none"><path d="M12 3 L13.6 9.2 L20 11 L13.6 12.8 L12 19 L10.4 12.8 L4 11 L10.4 9.2 Z" fill="currentColor"/></svg></div><div class="nlabel">AI</div></div>
+        <svg class="arrow" viewBox="0 0 74 22" fill="none"><path d="M4 11 H60" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/><path d="M52 4 L64 11 L52 18" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <div class="card">
+          <div class="card-hd">One-page prep brief <span class="pin"></span></div>
+          <div class="crow"><div><div class="rt">Background</div></div></div>
+          <div class="crow"><div><div class="rt">Likely objections</div></div></div>
+          <div class="crow"><div><div class="rt">An angle they'd miss</div></div></div>
+          <div class="crow"><div><div class="rt">The best question to ask</div></div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 7 :: LEVEL 2 / MONEY — prompt -->
+    <section class="slide" data-ch="4">
+      <div class="kick"><span class="gl"></span>Level 2 · The prompt</div>
+      <div class="grow">
+      <div class="prompt">
+        <div class="ptab"><span class="gl"></span>Prompt</div>
+        <div class="pbody" style="font-size:17px;line-height:1.62">Build me a one-page prep brief for my call with <span class="var">[PROSPECT]</span>.
+
+Use only my notes, past emails, and CRM record for this prospect.
+
+Give me:
+- Background: who they are and what they care about most (2-3 lines)
+- Their likely objections, with a short answer for each
+- One angle tailored to them that most people would miss
+- The single best question for me to ask on the call
+
+Rules:
+- <span class="hl">Pull every fact from my sources.</span> If you're guessing, label it <span class="var">[GUESS]</span> so I can check it.
+- If something important is missing, say so plainly instead of filling it in.
+- Keep it to one page. Plain language.</div>
+      </div>
+      </div>
+    </section>
+
+    <!-- 8 :: LEVEL 3 / UNLOCK — example -->
+    <section class="slide center" data-ch="5">
+      <div class="kick"><span class="gl"></span>Level 3 · Unlock</div>
+      <h1 class="title">Files <span style="color:var(--accent)">&rarr;</span> Patterns</h1>
+      <div class="flow" style="margin-top:46px">
+        <div class="node">
+          <div class="pile"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+          <div class="nlabel" style="max-width:240px;line-height:1.95;margin-top:14px">Hundreds of reviews<br>Years of tickets<br>A folder of contracts</div>
+        </div>
+        <svg class="arrow" viewBox="0 0 74 22" fill="none"><path d="M4 11 H60" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/><path d="M52 4 L64 11 L52 18" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <div class="node"><div class="ai"><svg viewBox="0 0 24 24" fill="none"><path d="M12 3 L13.6 9.2 L20 11 L13.6 12.8 L12 19 L10.4 12.8 L4 11 L10.4 9.2 Z" fill="currentColor"/></svg></div><div class="nlabel">Reads everything</div></div>
+        <svg class="arrow" viewBox="0 0 74 22" fill="none"><path d="M4 11 H60" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/><path d="M52 4 L64 11 L52 18" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <div class="node">
+          <div class="rank">
+            <div class="rrow"><span class="rk">1</span><span class="bar" style="width:150px"></span><span class="fq">32%</span></div>
+            <div class="rrow"><span class="rk">2</span><span class="bar" style="width:120px"></span><span class="fq">24%</span></div>
+            <div class="rrow"><span class="rk">3</span><span class="bar" style="width:92px"></span><span class="fq">18%</span></div>
+            <div class="rrow"><span class="rk">4</span><span class="bar" style="width:64px"></span><span class="fq">11%</span></div>
+            <div class="rrow"><span class="rk">5</span><span class="bar" style="width:44px"></span><span class="fq">7%</span></div>
+          </div>
+          <div class="nlabel" style="color:var(--lv3)">Top 5 patterns — ranked</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 9 :: LEVEL 3 / UNLOCK — prompt -->
+    <section class="slide" data-ch="5">
+      <div class="kick"><span class="gl"></span>Level 3 · The prompt</div>
+      <div class="grow">
+      <div class="prompt">
+        <div class="ptab"><span class="gl"></span>Prompt</div>
+        <div class="pbody" style="font-size:15.5px;line-height:1.6">Read every file in <span class="var">[FOLDER / SOURCE]</span> and find the most important patterns.
+
+I'm looking for the complaints, requests, or risks that come up most often — and any opportunity hiding in the data.
+
+For each pattern, give me:
+- A one-line description
+- How often it shows up (a rough count or percent)
+- One real quote or example as proof
+- Why it matters to me
+
+Rules:
+- Base everything on what's actually in the files. If you're inferring, label it <span class="var">[INFERRED]</span>.
+- <span class="hl">Tell me how many files you actually read</span>, out of the total, so I know it covered everything.
+- Rank the patterns by how much they affect my revenue or my customers.
+- <span class="hl">Give me the top 5.</span> Don't pad the list.</div>
+      </div>
+      </div>
+    </section>
+
+    <!-- 10 :: RECAP -->
+    <section class="slide center" data-ch="6">
+      <div class="kick"><span class="gl"></span>The whole thing</div>
+      <div class="spread" style="margin-top:8px;gap:80px">
+        <div class="deck-row" style="--g:42px">
+          <div class="meter" style="--c:var(--lv1)"><div class="track" style="width:46px;height:210px"><div class="fill" style="--h:55%"></div><div class="handle" style="--h:55%"></div></div><div class="mlabel"><div class="ix">L1</div></div></div>
+          <div class="meter" style="--c:var(--lv2)"><div class="track" style="width:46px;height:210px"><div class="fill" style="--h:30%"></div><div class="handle" style="--h:30%"></div></div><div class="mlabel"><div class="ix">L2</div></div></div>
+          <div class="meter" style="--c:var(--lv3)"><div class="track" style="width:46px;height:210px"><div class="fill" style="--h:15%"></div><div class="handle" style="--h:15%"></div></div><div class="mlabel"><div class="ix">L3</div></div></div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:26px;max-width:520px">
+          <h1 class="title" style="font-size:50px;margin-bottom:6px">Recap.</h1>
+          <div class="lit" data-s="1" style="display:flex;gap:16px;align-items:baseline"><span style="font-family:var(--mono);color:var(--lv1);font-size:14px">01</span><span style="font-family:var(--serif);font-size:27px">Saving time is only Level 1.</span></div>
+          <div class="lit" data-s="2" style="display:flex;gap:16px;align-items:baseline"><span style="font-family:var(--mono);color:var(--lv3);font-size:14px">02·03</span><span style="font-family:var(--serif);font-size:27px">Shift your mix to money and the impossible.</span></div>
+        </div>
+      </div>
+    </section>
+
+  </div>
+</div>
+
+<script>
+(function(){
+  var ACC = ['#E3B341','#46C4D6','#ED7FA6','#5B9DF9','#3FBE8E','#A98BF6','#D8C9A4'];
+  var NAV = [
+    ['01','Start'],['02','Levels'],['03','Mix'],
+    ['04','Time'],['05','Money'],['06','Unlock'],['07','Recap']
+  ];
+  var stage   = document.getElementById('stage');
+  var slides  = Array.prototype.slice.call(document.querySelectorAll('.slide'));
+  var navEl   = document.getElementById('nav');
+  var curEl   = document.getElementById('cur');
+  var cur = 0, step = 0, selfHash = false;
+
+  // build nav
+  NAV.forEach(function(n,i){
+    var b = document.createElement('button');
+    b.className = 'nav-item';
+    b.innerHTML = '<span class="cap"></span><span class="lab"><i>'+n[0]+'</i>'+n[1]+'</span>';
+    b.addEventListener('click', function(){ jumpChapter(i); });
+    navEl.appendChild(b);
+  });
+  var navItems = Array.prototype.slice.call(navEl.querySelectorAll('.nav-item'));
+
+  function chOf(i){ return +slides[i].dataset.ch; }
+  function maxStep(i){
+    var el = slides[i];
+    var fades = Array.prototype.slice.call(el.querySelectorAll('.fade,.lit'));
+    var fmax = 0;
+    fades.forEach(function(f){ var s=+f.dataset.s||0; if(s>fmax) fmax=s; });
+    var declared = +el.dataset.steps || 0;
+    return Math.max(fmax, declared);
+  }
+  function firstOfChapter(ch){
+    for(var i=0;i<slides.length;i++){ if(chOf(i)===ch) return i; }
+    return 0;
+  }
+
+  function render(){
+    for(var i=0;i<slides.length;i++){
+      var on = (i===cur);
+      slides[i].classList.toggle('active', on);
+      if(on) slides[i].setAttribute('data-step', step);
+    }
+    var ch = chOf(cur);
+    stage.style.setProperty('--accent', ACC[ch]);
+
+    var el = slides[cur];
+    var reveals = el.querySelectorAll('.fade,.lit');
+    for(var r=0;r<reveals.length;r++){
+      reveals[r].classList.toggle('on', (+reveals[r].dataset.s||0) <= step);
+    }
+    navItems.forEach(function(n,idx){
+      n.classList.toggle('active', idx===ch);
+      n.classList.toggle('done', idx<ch);
+    });
+    curEl.textContent = (cur+1<10?'0':'')+(cur+1);
+
+    var h = '#'+cur+(step?('.'+step):'');
+    if(location.hash !== h){ selfHash = true; location.hash = h; }
+  }
+
+  function next(){
+    if(step < maxStep(cur)){ step++; render(); }
+    else if(cur < slides.length-1){ cur++; step=0; render(); }
+  }
+  function prev(){
+    if(step > 0){ step--; render(); }
+    else if(cur > 0){ cur--; step = maxStep(cur); render(); }
+  }
+  function jumpChapter(ch){ cur = firstOfChapter(ch); step = 0; render(); }
+
+  document.addEventListener('keydown', function(e){
+    if(e.key==='ArrowRight'||e.key===' '||e.key==='PageDown'){ e.preventDefault(); next(); }
+    else if(e.key==='ArrowLeft'||e.key==='PageUp'){ e.preventDefault(); prev(); }
+    else if(e.key==='Home'){ e.preventDefault(); cur=0; step=0; render(); }
+    else if(e.key==='End'){ e.preventDefault(); cur=slides.length-1; step=maxStep(cur); render(); }
+  });
+
+  window.addEventListener('hashchange', function(){
+    if(selfHash){ selfHash=false; return; }
+    var m = location.hash.match(/#(\d+)(?:\.(\d+))?/);
+    if(m){ cur=Math.min(+m[1], slides.length-1); step=Math.min(+(m[2]||0), maxStep(cur)); render(); }
+  });
+
+  function resize(){
+    var vw=window.innerWidth, vh=window.innerHeight;
+    var W=Math.max(1200, Math.min(1640, Math.round(720*vw/vh)));
+    stage.style.width=W+'px';
+    var scale=Math.min(vw/W, vh/720);
+    stage.style.transform='translate(-50%,-50%) scale('+scale+')';
+  }
+  window.addEventListener('resize', resize);
+
+  // init
+  var totEl=document.getElementById('tot'); if(totEl) totEl.textContent=slides.length;
+  resize();
+  var m0 = location.hash.match(/#(\d+)(?:\.(\d+))?/);
+  if(m0){ cur=Math.min(+m0[1], slides.length-1); step=Math.min(+(m0[2]||0), maxStep(cur)); }
+  render();
+})();
+</script>
+
+<style>
+  /* mix-slide state machine (lives after body so vars resolve) */
+  .mf1{--h:100%}.mf2{--h:2%}.mf3{--h:2%}
+  .fill.mf2,.fill.mf3{opacity:.10}
+  .slide[data-step="1"] .mf1{--h:55%}
+  .slide[data-step="1"] .mf2{--h:30%}
+  .slide[data-step="1"] .mf3{--h:15%}
+  .slide[data-step="1"] .fill.mf2,.slide[data-step="1"] .fill.mf3{opacity:.22}
+  .readout .n1{display:none}
+  .slide[data-step="1"] .readout .n0{display:none}
+  .slide[data-step="1"] .readout .n1{display:inline}
+  #mixsub .s1{display:none}
+  .slide[data-step="1"] #mixsub .s0{display:none}
+  .slide[data-step="1"] #mixsub .s1{display:inline}
+  /* (hero highlight step removed per revision) */
+</style>
+
+</body>
+</html>
